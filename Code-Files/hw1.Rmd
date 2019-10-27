@@ -1,0 +1,293 @@
+---
+title: "HW 1"
+author: "Tianqi Luo"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+params:
+  solutions: yes
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo       = params$solutions, 
+                      eval       = params$solutions,
+                      fig.align  = "center",
+                      fig.height = 3, 
+                      fig.width  = 5)
+```
+
+
+##Problem 1
+
+**(1)**
+
+**Load country data**
+```{r}
+library(ggthemes)
+library(tidyverse)
+country = read_csv("../data/country.csv")
+head(country)
+```
+
+**Load fertility data**
+```{r}
+fertility = read_csv("../data/fertility.csv")
+head(fertility)
+```
+
+**Load life expectancy data**
+```{r}
+life_exp = read_csv("../data/life_exp.csv")
+head(life_exp)
+```
+
+**Load population data**
+```{r}
+population = read_csv("../data/population.csv")
+head(population)
+```
+
+
+
+**(2)**
+
+**Tidy the ferility data**
+```{r}
+fertility %>%
+  gather(-c("Country Name" ,"Country Code"), key = "Year", value = "Fertility") %>%
+  mutate(Year = parse_number(Year)) -> tidy_fertility
+
+head(tidy_fertility)
+```
+
+**Tidy the life expectancy data**
+```{r}
+life_exp %>%
+  gather(-c("Country Name", "Country Code"), key = "Year", value = "LifeExpectancy") %>%
+  mutate(Year = parse_number(Year)) -> tidy_life_exp
+head(tidy_life_exp)
+```
+
+**Tidy the population data**
+```{r}
+population %>%
+  gather(-c("Country Name", "Country Code"), key = "Year", value = "Population") %>%
+  mutate(Year = parse_number(Year)) -> tidy_population
+head(tidy_population)
+```
+    
+**(3)**
+   
+```{r}
+head(tidy_life_exp)
+```
+
+**Combine population and life expectancy datasets**
+```{r}
+tidy1 = inner_join(tidy_population, tidy_fertility,by = c("Country Name", "Country Code", "Year"))
+
+tidy2 = inner_join(tidy1, tidy_life_exp, by = c("Country Name", "Country Code", "Year"))
+
+head(tidy2)
+```
+
+**Rename the dataset**
+```{r}
+country %>%
+  rename("Country Name" = TableName) ->
+  tidy_country
+
+head(tidy_country)
+```
+
+**Combine the dataset with country dataset**
+
+```{r}
+final_tidy = left_join(tidy2, tidy_country, by = c("Country Name", "Country Code"))
+
+head(final_tidy)
+```
+
+**(4)**
+
+**Filter the dataset by years**
+```{r}
+final_tidy %>%
+  filter(Year == 1960 | Year == 1970 | Year == 1980 | Year == 1990 | Year == 2000 | Year == 2010) %>%
+  filter(Region != "")  -> final_tidy_year
+
+final_tidy_year
+```
+
+
+**Plot the datset**
+```{r}
+library(ggthemes)
+ggplot(final_tidy_year, aes(x = LifeExpectancy, y = Fertility, color = Region, size = Population)) + 
+  geom_point(na.rm = TRUE) + 
+  scale_size(breaks = seq(2.50e+08, 1.25e+09, by = 2.50e+08)) +
+  facet_wrap( ~ Year)+ 
+  theme_bw() + 
+  theme(strip.background = element_rect(fill = "white")) + 
+  xlab("Life Expectancy") + 
+  ylab("Fertility Rate") + 
+  labs(color = "Region") + 
+  labs(size = "Population") + 
+  scale_color_colorblind()
+```
+
+
+**(5)**
+
+**Tidy the dataset**
+```{r}
+final_tidy %>%
+  group_by(Region, Year) %>%
+  summarize(TotalPopulation = sum(Population, na.rm = TRUE)) %>%
+  filter(Region != "") %>%
+  filter(Year != 2018) ->
+  region_total_population
+
+head(region_total_population)
+```
+
+**Plot the dataset**
+```{r}
+ggplot(region_total_population, aes(x = Year, y = TotalPopulation, color = Region)) + 
+  geom_smooth(se = F, method = "loess") + 
+  theme_bw() + 
+  ylab("Total Population") + 
+  scale_color_colorblind()
+```
+    
+**(6)**
+
+**Filter the dataset by year 2017**
+```{r}
+region_total_population %>%
+  filter(Year == 2017) -> region_total_population_2017
+
+
+head(region_total_population_2017)
+```
+
+**Plot the dataset using factor**
+```{r}
+ggplot(region_total_population_2017, aes(x = fct_reorder(Region, TotalPopulation, .desc = TRUE), y = TotalPopulation)) + 
+  geom_col() + 
+  xlab("Region") + 
+  coord_flip()
+```
+   
+## Problem 2
+
+**(1)**
+```{r}
+words = read_table("https://data-science-master.github.io/lectures/data/words.txt")
+
+head(words)
+```
+
+
+**(2)**
+```{r}
+words %>%
+  filter(str_detect(word, "Z")) %>%
+  mutate(number_of_z = str_count(word, "Z")) %>%
+  mutate(word_length = str_count(word)) %>%
+  arrange(desc(number_of_z), word_length) -> shortest_z
+
+head(shortest_z)
+```
+
+**The shortest word that have the most "Zs" in them are "ZZZ", "ZIZZ" and "ZZZS", "PZAZZ" **
+
+
+**(3)**
+
+**Use substring to split the words by two halves, create two variables first_half and last_half, and filter the ones that have the same first_half and last_half variables**
+
+```{r}
+words %>%
+  mutate(count = str_count(word)) %>%
+  mutate(first_half = substring(word, 1, floor(str_count(word)/2))) %>%
+  mutate(last_half = substring(word, ceiling(str_count(word)/2 + 1), str_count(word))) %>%
+  filter(first_half == last_half) -> identical_half_words
+
+head(identical_half_words)
+```
+
+**Count the words**
+```{r}
+identical_half_words %>%
+  summarize(count = length(word))
+```
+
+**There are 254 words that has an identical first half and second half**
+
+
+**(4)**
+
+```{r}
+identical_half_words %>%
+  arrange(desc(count)) ->
+  longest_word
+
+head(longest_word)
+```
+
+**The longest word that has an identical first and second half is "CHIQUICHIQUI"**
+
+
+# Problem 3
+
+## Part I
+
+**(1)**
+     
+**We can use a scatterplot or a line graph in this case. **
+    
+    
+**(2)**
+    
+
+**We can use a boxplot or a bar graph in this casse**
+    
+   
+
+**(3)**
+
+
+**We can use a histogram or a boxplot this case**
+    
+    
+**(4)**
+  
+**We can use a boxplot or a bar graph in this case**
+
+
+## Part II
+
+**(1)**
+       
+**In this case, the observational units are the moribund house sparrows. The quantitative variables the measured lengths of the humerus, and the categorical variables are whether or not the sparrow survived the winter**
+       
+
+
+**(2)**
+       
+**In this case, the observational units are all the states. The quantitative variable are the percent change in traffic fatalities for all states, and the categorical variables are whether or not the state has elected to increase their speed limit**
+
+
+
+
+
+
+
+
+
+
+
+

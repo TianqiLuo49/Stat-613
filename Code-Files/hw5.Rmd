@@ -1,0 +1,186 @@
+---
+title: "HW 5"
+author: "Tianqi Luo"
+date: "`r Sys.Date()`"
+output: html_document
+urlcolor: "blue"
+params:
+  solutions: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo       = params$solutions, 
+                      eval       = params$solutions,
+                      fig.align  = "center",
+                      fig.height = 3, 
+                      fig.width  = 5)
+```
+
+## Flight 14 ##
+
+### 1 ### 
+
+**Read in the data**
+```{r}
+flights14 = read.csv("../data/flights14.csv")
+```
+
+```{r}
+head(flights14)
+```
+
+
+### 2 ###
+
+### (a) ###
+
+**Plot a boxplot with the data**
+```{r}
+boxplot(flights14$dep_delay, ylab = "Minutes Delayed", main = "Boxplot of Airport Delays")
+```
+
+**From the boxplot, we can see that the median is roughly around 0. Since the distribution has a lot of large outliers, mostly greater than 0, we can assume the mean to be way larger than the median, which makes it larger than 0. So from the boxplot, we can roughly assume that on average the flights are delayed for departure**
+
+
+
+### (b) ###
+
+**Run a one-sided t-test for the delay minutes**
+```{r}
+t.test(flights14$dep_delay, mu = 0, alternative = "greater")
+```
+
+
+### (c) ###
+
+**Null Hypothesis H0: mu = 0**
+
+**Alternative Hypothesis H0: mu > 0**
+
+**Level of significance 0.05**
+
+**We can see from the t-test that, the p-value is way smaller than the level of significance(0.05), so we reject H0 and conclude that mu > 0, that means on average the flights are delayed and the representative is wrong**
+
+### (d) ###
+
+**Run a t-test on dep_delay, save the results to a dataframe, and extract the 95% confidence interval**
+```{r}
+library(tidyverse)
+library(broom)
+t.test(flights14$dep_delay, mu = 0) %>%
+  tidy() ->
+  tout
+
+confint_95_percent = c(tout$conf.low, tout$conf.high)
+confint_95_percent
+```
+
+**The 95% confidence interval of the mean delay times is (12.303, 12.627))**
+
+
+### 3 ###
+
+**Split the variable dep_delay based on the airports**
+```{r}
+JFK_dep_delay = flights14$dep_delay[which(flights14$origin == "JFK")]
+EWR_dep_delay = flights14$dep_delay[which(flights14$origin == "EWR")]
+LGA_dep_delay = flights14$dep_delay[which(flights14$origin == "LGA")]
+```
+
+**Run the t-test for JFK airport and extract the 95% confidence interval**
+```{r}
+t.test(JFK_dep_delay) %>%
+  tidy() ->
+  JFK_tout
+
+JFK_confint = c(JFK_tout$conf.low, JFK_tout$conf.high)
+
+JFK_confint
+```
+
+**The 95% confidence interval for JFK is (11.162, 11.730)**
+
+**Run the t-test for EWR airpot and extract the 95% confidence interval**
+```{r}
+t.test(EWR_dep_delay) %>%
+  tidy() ->
+  EWR_tout
+
+EWR_confint = c(EWR_tout$conf.low, EWR_tout$conf.high)
+
+EWR_confint
+```
+
+**The confidence interval for EWR is (14.926, 15.499)**
+
+**Run the t-test for LGA airport and extract the 95% confidence interval**
+```{r}
+t.test(LGA_dep_delay) %>%
+  tidy() ->
+  LGA_tout
+
+LGA_confint = c(LGA_tout$conf.low, LGA_tout$conf.high)
+
+LGA_confint
+```
+
+**The confidence interval for LGA is (10.334, 10.876)**
+
+
+**Yes, all airports have such bad delay times. However, of the three, LGA has the shortest delay time, followed by JFK, than EWR**
+
+### 4 ###
+
+**Split the variable arr_delay based on the destinations "ORD" and "MDW"**
+```{r}
+ORD_arr_delay = flights14$arr_delay[which(flights14$dest == "ORD")]
+MDW_arr_delay = flights14$arr_delay[which(flights14$dest == "MDW")]
+```
+
+**Run the two-sample t-test for arr_delay in ORD and MDW, extract the p-value**
+```{r}
+t.test(ORD_arr_delay, MDW_arr_delay) %>%
+  tidy() ->
+  ORD_MDW_tout
+
+ORD_MDW_tout$p.value
+```
+
+**Null Hypothesis H0: mu1 - mu2 = 0 **
+
+**Alternative Hypothesis HA: mu1 - mu2 != 0 **
+
+**We can see the p-value is 0.600, greater than the level of significance(0.05), so we can reject H0 and conclude that mu1 - mu2 != 0, which means that ORD and MDW do not have the same arrival delay**
+
+
+## Conceptual Exercises ##
+
+### 1 ###
+
+**We discuss the probability of the data given the hypothesis(b) because in frequentist inference it never uses or gives the probability of a hypothesis. We need to set up the null hypothesis and alternative hypothesis first to do the inference**
+
+### 2 ###
+
+**The p-value might be small because (1)The targeted hypothesis is false. (2) Study protocols were violated. (3) It was selected for presentation based on its small size.**
+
+
+### 3 ###
+
+**False. Even though the p-value is close to 1, but it's still smaller than 1, which means there are other p-values more compatible with the data, so it might not be so "strong" compared with a much closer p-value to 1. The p-value can only be said to favor the null hypothesis except when it's compared to other hypotheses with smaller p-values**
+
+### 4 ###
+
+**No, there isn't. The computing of p-values are not numerically accurate below a certain point, so the inequality becomes justifiable**
+
+### 5 ###
+
+**False. 95% confidence intervals mean that, out of all the repeated calculations of the confidence intervals, on average, 95% of them will capture the true parameter. So one 95% confidence interval does not necessarily have a 95% probability of capture the true parameter**
+
+
+
+
+
+
+
+
+

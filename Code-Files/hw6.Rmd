@@ -1,0 +1,199 @@
+---
+author: "Tianqi Luo"
+title: "HW 5"
+output: html_document
+---
+
+```{r}
+knitr::opts_chunk$set(eval = TRUE, echo = TRUE)
+```
+
+
+```{r, eval=FALSE}
+library(shiny)
+library(ggplot2)
+
+ui <- fluidPage(
+  varSelectInput("x", "x", data = mpg),
+  varSelectInput("y", "y", data = mpg),
+  varSelectInput("color", "color", data = mpg), 
+  plotOutput("scatter")
+  )
+
+server <- function(input, output, session) {
+  output$scatter = renderPlot({
+      ggplot(mpg, aes(x = !!input$x, y = !!input$y, color = !!input$color)) + 
+          geom_point() + 
+          theme_bw()
+  })
+}
+shinyApp(ui, server)
+
+```
+
+```{r, eval=FALSE}
+ui <- fluidPage(
+  textInput("text1", "Noun"),
+  textInput("text2", "Verb"), 
+  textInput("text3", "Noun"), 
+  textInput("text4", "Noun"), 
+  textOutput("madlibs")
+)
+
+server <- function(input, output, session) {
+  output$madlibs = renderText({
+    paste("Unfortunately, James, no one can be told what", input$text1, 
+          "is. You have to see it for yourself. But before I", input$text2, 
+          "you, Mr.Bond. I must show you that life isn't just about getting", input$text3, 
+          ", it's about getting", input$text4, 
+          "too.", sep = " ")
+  })
+}
+
+shinyApp(ui, server)
+```
+
+
+
+
+```{r, eval=FALSE}
+plotType = function(type) {
+    switch(type, "Histogram" = geom_histogram(), 
+           "Frequency Polygon" = geom_freqpoly(), 
+           "Density" = geom_density())
+}
+
+ui <- fluidPage(
+    varSelectInput("variable", "Variable", data = mtcars),
+    radioButtons("graphtype", "Type of Plot", choices = c("Histogram", "Frequency Polygon", "Density")),
+    plotOutput("plot")
+)
+
+
+
+
+server <- function(input, output, session) {
+    output$plot= renderPlot({
+        ggplot(mtcars, aes(x = !!input$variable)) + 
+            plotType(input$graphtype) + 
+            theme_bw()
+        
+    })
+}
+
+shinyApp(ui, server)
+```
+
+
+
+
+## Tuition ##
+
+```{r}
+library(Sleuth3)
+```
+
+```{r}
+head(ex0332)
+```
+
+### a ###
+
+**Filter out all the public schools**
+```{r}
+library(tidyverse)
+library(broom)
+```
+
+
+
+**Tidy the dataset, create a diff variable that contains the difference between out of state tuition and instate tuition**
+```{r}
+ex0332 %>%
+  filter(Type == "Public") %>%
+  mutate(diff = OutOfState - InState) ->
+  public_school
+```
+
+**Create a boxplot of diff**
+```{r}
+ggplot(public_school, aes(y = diff)) + 
+  geom_boxplot() + 
+  theme_bw()
+```
+
+**From the boxplot, we can see nearly all the differences are greater than 0 for the out-of-state tuition and in-state tuition between public schools**
+
+**We run a t-test to confirm the boxplot**
+```{r}
+tout_public = t.test(public_school$diff, mu = 0, alternative = "greater") 
+tidy_tout_public = tidy(tout_public)
+tidy_tout_public$p.value
+```
+
+**Set up the null hypothesis and alternative hypothesis for the difference in OutOfState tuition and InState tuition**
+
+**H0: diff = 0**
+
+**HA: diff > 0**
+
+**Since the p-value is extremely small, we can reject the H0 conclude that nearly all of the public school have more expensive out-of-state tuition than in-state tuition, which corresponds with our boxplot**
+
+
+
+
+### b ###
+
+**Create the boxplot based on type and in-state tuition**
+```{r}
+ggplot(ex0332, aes(x = Type, y = InState)) + 
+  geom_boxplot() + 
+  theme_bw()
+```
+
+**We can see from the boxplot that nearly all private schools have larger in-state tuition than public schools except for some outliers**
+
+**Run a t-test to confirm the boxplot**
+```{r}
+tout1 = t.test(InState ~ Type, alternative = "greater", data = ex0332)
+tidy_tout1 = tidy(tout1)
+tidy_tout1$p.value
+```
+
+**Set up a null hypothesis and alternative hypothesis for the in-state tuition for both public and private schools**
+
+**H0: Private - Public = 0**
+
+**HA: Public - Private > 0**
+
+**We can see that since the p-value is extremely, small, we can reject the H0 and conclude that nearly all of the private schools have more expensive in-state tuition than that of public schools, which corresponds well with our boxplot**
+
+
+
+### c ###
+
+**Draw a boxplot for out-of-state tuition for both private and public schools**
+```{r}
+ggplot(ex0332, aes(x = Type, y = OutOfState)) + 
+  geom_boxplot() + 
+  theme_bw()
+```
+
+**We can see that most private schools have larger out-of-state tuition than public schools, although the extent is not as strong as those for in-state-tutions**
+
+
+**Run a t-test to confirm it**
+```{r}
+tout2 = t.test(OutOfState ~ Type, alternative = "greater", data = ex0332)
+tidy_tout2 = tidy(tout2)
+tidy_tout2$p.value
+```
+
+**Set up Null and Alternative Hypotheses for Out of State Tuition for Public and Private Schools**
+
+**H0: Private - Public = 0 **
+
+**HA: Private - Public > 0 **
+
+**We can see from the while the p-value is still smaller than 0.05(our level of significance), it's not smaller to the point that we can completely ignore it. We can still reject it and conclude that in general private schools have more expensive out-of-state tuition than public schools, although the extent is not as strong or extreme than those for in-state tuition**
+  

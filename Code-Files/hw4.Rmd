@@ -1,0 +1,171 @@
+
+## Stat 613 HW 4 ##
+
+## Tianqi Luo ##
+
+
+## Question: Estate Data ##
+
+### (1) ###
+
+**Read data into Rmarkdown**
+```{r message = FALSE}
+library(tidyverse)
+estate = read_csv("../data/estate.csv")
+
+head(estate)
+```
+
+### (2) ###
+
+```{r}
+library(purrr)
+```
+
+**Write a function to test if the variable is binary**
+```{r}
+binary = function(x) {
+  if (length(unique(x)) == 2){
+    return("Binary")
+    }
+  
+  else
+    {return ("Not binary")}
+}
+```
+
+**Write the map function to apply the function to the data**
+```{r}
+head(map(estate, binary))
+```
+
+
+### (3) ###
+
+
+
+
+**Rewrite the function**
+```{r}
+head(estate %>%
+  split(.$Style) %>%
+  map(~lm(Price ~ Area, data = .)))
+```
+
+## Question: purrr ##
+
+### (1) ###
+
+**The code is used to generate 5 random samples in a normal distribution with mean 0 for varying standard deviations, the standard deviations range from 1 to 10.**
+
+### (2) ###
+
+**Write a function that generates x random samples from a normal distribution with mean = 10 and variance = 1, use the replicate function to repeat 1000 times**
+
+```{r}
+library(ggplot2)
+norm_func = function(x) {
+  sample = replicate(1000, {mean(rnorm(x, 10, 1))})
+  norm_dat = data.frame(rep(x, 1000), sample)
+  return(norm_dat)
+}
+```
+
+
+**Use the map function to apply the function for all sample sizes, merge the dataframes**
+```{r}
+samples = map(c(1, 10, 50, 100, 500, 1000), norm_func)
+samples_df = bind_rows(samples)
+
+head(samples_df)
+```
+
+**Tidy the dataframe**
+```{r}
+samples_df %>%
+  rename("n" = 1) %>%
+  mutate(n = as.factor(n)) ->
+  tidy_samples
+
+head(tidy_samples)
+```
+
+
+**Draw a boxplot with the sample sizes the samples**
+```{r}
+ggplot(tidy_samples, aes(x = n, y = sample)) + 
+  geom_boxplot() + 
+  theme_bw()
+```
+
+**We can see as the samples sizes get larger, the sample mean gets closer to the distribution mean 10. When the sample sizes are super large(1000), they're almost entirely equal.**
+
+
+## File Reading ##
+
+**(1)**
+
+**Make a list of the files from the gapminder folder**
+```{r}
+country_list = list.files("../data/gapminder")
+
+head(country_list)
+```
+
+**Write a function using for loop to extract all the files into gaplist, use paste to change the directory by looping through the country list**
+```{r message = FALSE}
+gaplist = list()
+link = vector("character", length(country_list))
+
+for(i in 1: length(country_list)) {
+  link[i] = paste("../data/gapminder", country_list[i], sep = "/")
+  gaplist[[i]] = read_csv(link[i])
+}
+```
+
+```{r}
+head(gaplist)
+```
+
+### 3 ###
+
+**Merge all the gaplist dataframes**
+```{r}
+all_gaplist = bind_rows(gaplist)
+
+head(all_gaplist)
+```
+
+
+
+
+## Challenge ##
+
+**Write a function by creating a sequence from 1 to x, loop through every single value to find the remainder with every value in the sequence. If the number of reminder is 2, then it is a prime, then remove the NA and return the vector.**
+
+```{r}
+get_prime = function(x) {
+  prime = vector()
+  sequence = seq(1:x)
+  for(i in 1:x) {
+  if(length(which(sequence[i] %% sequence[1:i] == 0)) == 2) {
+   prime[i] = sequence[i]   
+  }
+  }
+  prime = prime[which(prime != "NA")]
+  return(prime)
+}
+```
+
+
+**Test it on the values**
+```{r}
+get_prime(1)
+get_prime(2)
+get_prime(10)
+get_prime(23)
+```
+
+
+
+

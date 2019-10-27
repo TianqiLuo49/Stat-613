@@ -1,0 +1,285 @@
+---
+title: "Midterm 1 (40 pts)"
+author: "Tianqi Luo"
+date: "`r Sys.Date()`"
+output: html_document
+urlcolor: "blue"
+params:
+  solutions: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo       = params$solutions, 
+                      eval       = params$solutions,
+                      fig.align  = "center",
+                      fig.height = 3, 
+                      fig.width  = 5)
+```
+
+```{r, message = FALSE}
+library(tidyverse)
+```
+
+
+## Question 1: Simulation Output ##
+
+
+### 1 ###
+```{r}
+item_list = list.files("../data/fp_fits")
+head(item_list)
+```
+
+**Use a for loop and paste function to read all of the data respectively in fplist**
+```{r}
+fplist = list()
+link = vector("character", length(item_list))
+
+for(i in 1: length(link)) {
+  link[i] = paste("../data/fp_fits", item_list[i], sep = "/")
+  fplist[[i]] = readRDS(link[i])
+}
+```
+
+
+
+### 2 ###
+
+```{r}
+library(purrr)
+```
+
+**Write a function to extract the elapsed variable**
+```{r}
+elapsed_func = function(x) {
+  elapsed = fplist[[x]]$time[[3]]
+  return(elapsed)
+}
+```
+
+**Use map function to create a list with elapsed variable for every data, then unlist the list**
+```{r}
+elapsed = unlist(map(seq(1,20), elapsed_func))
+elapsed
+```
+
+### 3 ### 
+
+```{r}
+names(fplist[[1]]$scores)
+```
+
+**Write a function to calculate the means of P0 - P6 (The 5th column all the way to the 11th column)
+```{r}
+means_func = function(x) {
+  means = colMeans(fplist[[x]]$scores[5:11])
+  return(means)
+}
+```
+
+**Use the map function to do it for every single data**
+```{r}
+means_total = map(seq(1,20), means_func)
+
+means_total[[1]]
+```
+
+
+
+## Earthquakes: Dates ##
+
+### 1 ###
+
+**Read the data**
+```{r message = FALSE}
+eqbig = read_csv("../data/eqbig.csv")
+
+head(eqbig)
+```
+
+### 2 ###
+
+**Combine the Year with the Date variable by paste, then use wday to display the weekday**
+```{r}
+library(lubridate)
+eqbig %>%
+  mutate(NewDate = mdy(paste(Date, Year))) %>%
+  mutate(Weekday = wday(NewDate, label = TRUE)) %>%
+  group_by(Weekday) ->
+  
+
+  eqbig_tidy
+  
+```
+
+```{r}
+head(eqbig_tidy)
+```
+
+**Recode the weekday variable**
+```{r}
+eqbig_tidy$Weekday = recode_factor(eqbig_tidy$Weekday, "Sun" = "Sunday", "Mon" = "Monday", "Tue" = "Tuesday", "Wed" = "Wednesday", "Thu" = "Thursday", "Fri" = "Friday", "Sat" = "Saturday")
+```
+
+
+```{r}
+head(eqbig_tidy)
+```
+
+
+**Plot the Magnitude with the Weekdays**
+```{r}
+library(ggplot2)
+ggplot(eqbig_tidy, aes(x = Weekday, y = Magnitude)) + 
+  geom_point() + 
+  theme_bw() + 
+  xlab("Day of the Week")
+```
+
+
+
+## Lists / Vectors ##
+
+```{r, echo = TRUE, eval = TRUE}
+ohio_state <- list(established = 1870,
+                   nobel = tribble(~name,            ~year, ~field,
+                                   ## --------------\------\-------
+                                   "Leon Cooper",    1972,  "Physics",
+                                   "Paul Flory",     1974,  "Chemistry",
+                                   "William Fowler", 1983,  "Physics",
+                                   "Kenneth Wilson", 1982,  "Physics"),
+                   championship = tribble(~Year, ~Record, ~Bowl,
+                                          1942,  "9–1",   NA,
+                                          1954,	 "10–0",  "Rose Bowl",
+                                          1957,	 "9–1",   "Rose Bowl",
+                                          1961,	 "8–1",	NA,
+                                          1968,	 "10–0",  "Rose Bowl",
+                                          1970,	 "9–1",   "Rose Bowl",
+                                          2002,	 "14–0",  "Fiesta Bowl",
+                                          2014,	 "14–1",  "Sugar Bowl"),
+                   song = c("In old Ohio there's a team",
+                            "That's known throughout the land",
+                            "Eleven warriors brave and bold",
+                            "Whose fame will ever stand",
+                            "And when that ball goes over,",
+                            "Our cheers will reach the sky",
+                            "Ohio Field will hear again",
+                            "The Buckeye Battle Cry!"),
+                   location = "Columbus, Ohio"
+                   )
+```
+
+### 1 ###
+```{r}
+head(ohio_state)
+```
+
+**Separate the Record into variables Win and Loss**
+```{r}
+ohio_state$championship %>%
+  separate(Record, into = c("Win", "Loss")) ->
+  championship
+```
+
+**Change the dataframe from the list into the new one**
+```{r}
+ohio_state$championship = championship
+```
+
+```{r}
+ohio_state$championship
+```
+
+### 2 ###
+
+**First way**
+```{r}
+ohio_state$established
+```
+
+**Second way**
+```{r}
+ohio_state[["established"]]
+```
+
+**Third way, using the numeric index**
+```{r}
+names(ohio_state)
+ohio_state[[1]]
+```
+
+## Iteration Challenge ##
+
+```{r}
+add_val = function(x) {
+  if( x %% 1 != 0) {
+    stop("n needs to be an integer")
+  }
+  else if( x < 0) {
+    stop("n needs to be positive")
+  }
+  else {
+  val = vector("numeric", x)
+  val[1] = 2
+  for(i in 1: x) {
+    if(val[i] %% 6 == 0) {
+      val[i + 1] = val[i] -1
+    }
+    else if(val [i] %% 2 == 0) {
+      val[i + 1] = val[i] + 3
+    
+    }
+    else if(val[i] %% 3 == 0) {
+      val[i + 1] = val[i] + 2
+    }
+    else if(val[i] < 0) {
+      stop("n needs to be positive")
+    }
+    else if(val[i] %% 1 != 0) {
+      stop("n needs to be an integer")
+    }
+    else{
+      val[i + 1] = val[i] - 1
+    }
+  }
+    
+  }
+  return(val[x])
+}
+
+```
+
+
+**Evaluate**
+```{r error = TRUE}
+add_val(-1)
+```
+
+```{r error = TRUE}
+add_val(3.5)
+```
+
+```{r}
+add_val(1)
+add_val(2)
+add_val(3)
+add_val(4)
+add_val(5)
+add_val(100)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

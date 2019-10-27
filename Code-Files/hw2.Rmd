@@ -1,0 +1,255 @@
+---
+title: "HW 2"
+author: "Tianqi Luo"
+date: "`r Sys.Date()`"
+output: html_document
+urlcolor: "blue"
+params:
+  solutions: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo       = params$solutions, 
+                      eval       = params$solutions,
+                      fig.align  = "center",
+                      fig.height = 3, 
+                      fig.width  = 5)
+```
+
+## Problem 1##
+
+### 1 ###
+
+**Read the data**
+```{r}
+library(tidyverse)
+library(lubridate)
+cw = read_csv("../data/civil_war.csv")
+head(cw)
+```
+
+
+
+### 2 ###
+
+```{r}
+year_regex = str_c(1861:1865, collapse = "|")
+year_regex
+```
+
+```{r}
+cw %>%
+  mutate(year_count = str_count(Date, year_regex)) ->
+  cw_year_count
+
+head(cw_year_count)
+```
+
+### 3 ###
+
+
+```{r}
+month.name
+```
+
+```{r}
+month_regex = str_c(month.name, collapse = "|")
+month_regex
+```
+
+```{r}
+cw_year_count %>%
+  mutate(month_count = str_count(Date, month_regex)) ->
+  cw_year_month_count
+
+head(cw_year_month_count)
+```
+
+### 4 ###
+
+```{r}
+cw_year_month_count %>%
+  mutate(multiple_days = str_detect(Date, "-")) ->
+  cw_multiple_days
+
+head(cw_multiple_days)
+```
+
+### 5 ###
+
+**One day**
+```{r}
+cw_multiple_days %>%
+  filter(multiple_days == FALSE) ->
+  cw_one_day
+
+head(cw_one_day)
+```
+
+**Multiple days one month**
+```{r}
+cw_multiple_days %>%
+  filter(multiple_days == TRUE) %>%
+  filter(month_count == 1) ->
+  cw_multiple_days_one_month
+
+head(cw_multiple_days_one_month)
+```
+
+**Multiple months**
+
+```{r}
+cw_multiple_days %>%
+  filter(multiple_days == TRUE) %>%
+  filter(month_count != 1) %>%
+  filter(year_count == 1) ->
+  cw_multiple_months_one_year
+
+head(cw_multiple_months_one_year)
+```
+
+**Multiple years**
+```{r}
+cw_multiple_days %>%
+  filter(multiple_days == TRUE) %>%
+  filter(year_count != 1) ->
+  cw_multiple_years
+
+head(cw_multiple_years)
+```
+
+
+### 6 ###
+
+```{r}
+cw_one_day %>%
+  separate(Date, into = c("Start", "End"), sep = "-") %>%
+  mutate(Start = mdy(Start)) %>%
+  mutate(End = Start) %>%
+  dplyr:: select(Battle, State, Start, End, CWSAC, Outcome)-> tidy_one_day
+
+head(tidy_one_day)
+```
+
+   
+**Tidy the multiple days one month data**
+```{r}
+cw_multiple_days_one_month %>%
+  separate(Date, into = c("StartMonthDay", "EndDayYear"), sep = "-") %>%
+  separate(StartMonthDay, into = c("Month", "StartDay")) %>%
+  separate(EndDayYear, into = c("EndDay", "Year")) %>%
+  mutate(Start = paste(Month, StartDay, Year), End = paste(Month, EndDay, Year)) %>%
+  mutate(Start = mdy(Start), End = mdy(End)) %>%
+  dplyr:: select(Battle, State, Start, End, CWSAC, Outcome)->
+  tidy_days_one_month
+
+head(tidy_days_one_month)
+```
+
+**Tidy the multiple days multiple months data**
+```{r}
+cw_multiple_months_one_year %>%
+  separate(Date, into = c("StartMonthStartDay", "EndMonthEndDayYear"), sep = "-") %>%
+  separate(EndMonthEndDayYear, into = c("EndMonthEndDay", "Year"), sep = ",") %>%
+  mutate(Start = paste(StartMonthStartDay, Year), End = paste(EndMonthEndDay, Year)) %>%
+  mutate(Start = mdy(Start), End = mdy(End)) %>%
+  dplyr:: select(Battle, State, Start, End, CWSAC, Outcome)->
+  tidy_months_one_year
+
+head(tidy_months_one_year)
+```
+
+**Tidy the multiple years**
+```{r}
+cw_multiple_years %>%
+  separate(Date, into = c("Start", "End"), sep = "-") %>%
+  mutate(Start = mdy(Start), End = mdy(End)) %>%
+  dplyr:: select(Battle, State, Start, End, CWSAC, Outcome)->
+  tidy_years
+
+head(tidy_years)
+```
+
+### 7 ###
+
+**Combine all the data into one**
+```{r}
+final_cw = rbind(tidy_one_day, tidy_days_one_month, tidy_months_one_year, tidy_years)
+
+head(final_cw)
+```
+
+### 8 ###
+```{r}
+final_cw %>%
+  mutate(Days = End - Start) ->
+  final_cw_duration
+
+final_cw_duration %>%
+  filter(Days == max(Days)) %>%
+  dplyr::select(Battle, Days)
+  
+```
+
+**The longest battle is Siege of Port Hudson, it lasted for 49 days**
+
+### 9 ###
+```{r}
+ggplot(final_cw_duration, aes(x = as.factor(CWSAC), y = Days)) + 
+  geom_boxplot() + 
+  geom_smooth(method = "lm", formula = y ~ as.factor(x), se = F) +
+  #scale_y_log10() + 
+  xlab("Significance") + 
+  ylab("Duration") 
+```
+
+**We can see there is indeedn an association between the duration and the significance of the battle. As the significance gets greater, the battles tend to last longer**
+
+### 10 ###
+
+**Replace all the state name with parentheses with just the names**
+```{r}
+final_cw_duration %>%
+  mutate(State = str_replace(State, "\\s*\\([^\\)]+\\)", "")) -> tidy_state_duration
+
+head(tidy_state_duration)
+```
+
+**Create a data counting the number of apperances of the states**
+```{r}
+tidy_state_duration %>%
+  count(State) ->tidy_cw_duration
+
+tidy_cw_duration
+```
+
+
+**Filter the items with apperances more than 2**
+```{r}
+tidy_cw_duration %>%
+  filter(n > 2) ->
+  tidy_cw_duration_over_2
+
+head(tidy_cw_duration_over_2)
+```
+
+**Use left_join to merge the count of states with the original dataset**
+```{r}
+state_count = left_join(tidy_cw_duration_over_2, tidy_state_duration, by = "State")
+
+head(state_count)
+```
+
+**Create the graph, use fct_reorder to arrange the rank of the states**
+```{r}
+ggplot(state_count, aes(x = fct_reorder(State, Start) , y = Start)) + 
+  geom_boxplot() + 
+  coord_flip() + 
+  xlab("State") + 
+  ylab("Start Date")
+```
+
+
+
+
+

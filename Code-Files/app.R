@@ -1,0 +1,209 @@
+library(tidyverse)
+library(tidyverse)
+library(ggplot2)
+library(broom)
+library(DT)
+
+estate = read.csv("./data/estate.csv")
+
+
+estate %>%
+  mutate(AC = as.factor(AC)) %>%
+  mutate(Pool = as.factor(Pool)) %>%
+  mutate(Quality = as.factor(Quality)) %>%
+  mutate(Style = as.factor(Style)) %>%
+  mutate(Highway = as.factor(Highway)) ->
+  estate
+
+ui <- fluidPage(
+  sidebarLayout(
+    sidebarPanel(
+      conditionalPanel(
+        condition = "input.conditionedPanels == 'tab1'", 
+        selectInput("variable", "Variable", c(colnames(estate)), 
+                    selected = colnames(estate[1])), 
+        checkboxInput("log1", "log"),
+        sliderInput("bins", "Bins", min = 1, max = 100, value = 20), 
+        numericInput("nullvalue", "Null Value", value = 0)
+        
+      ), 
+      conditionalPanel(
+        condition = "input.conditionedPanels == 'tab2'", 
+        selectInput("var1", "Variable 1", c(colnames(estate)), 
+                    selected = colnames(estate[1])), 
+        checkboxInput("log2", "Log"), 
+        selectInput("var2", "Variable 2", c(colnames(estate)), 
+                    selected = colnames(estate[1])), 
+        checkboxInput("log3", "Log"), 
+        checkboxInput("ols", "OLS!")
+      )), 
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Univariate Analyses", 
+                 plotOutput("plot1"),
+                 dataTableOutput("ttest"),
+                 value = "tab1"), 
+        tabPanel("Bivariate Analysis", 
+                 plotOutput("plot2"), 
+                 value = "tab2"), 
+        tabPanel("Spreadsheets", 
+                 dataTableOutput("spreadsheet"), 
+        ), 
+        
+        
+        id = "conditionedPanels"
+      )
+    )
+  )
+)
+
+server <- function(input, output) {
+  
+  df1 = reactive({
+    t.test(estate[, input$variable], mu = input$nullvalue) %>%
+      tidy() %>%
+      select(p.value, conf.low, conf.high) %>%
+      rename("P.value" = 1, "Lower" = 2, "Upper" = 3) ->
+      tidy_df
+    return(tidy_df)
+    
+  })
+  
+  data.frame("not a numeric") %>%
+    rename("data" = 1) ->
+    df2
+  
+  
+  output$ttest = DT::renderDataTable({
+    
+    if(class(estate[, input$variable]) == "integer") {
+      
+      DT::datatable(df1(), options = list(dom = 't'))
+    }
+    
+    else {
+      DT::datatable(df2, options = list(dom = 't'))
+      
+    }
+  })
+  
+  
+  output$plot1 = renderPlot({
+    
+    if (class(estate[ , input$variable]) == "integer"){
+      if(input$log1 == TRUE) {
+        
+        ggplot(estate, aes(log(x = estate[, input$variable]))) + 
+          geom_histogram(bins = input$bins, color = "black", fill = "white") + 
+          theme_bw() + 
+          labs(x = input$variable, y = "count")}
+      
+      else {
+        ggplot(estate, aes(x = estate[, input$variable])) + 
+          geom_histogram(bins = input$bins, color = "black", fill = "white") + 
+          theme_bw() + 
+          labs(x = input$variable, y = "count")
+      }
+    }
+    
+    else {
+      if(input$log1 == TRUE) {
+        
+        
+        ggplot(data.frame(table(estate[, input$variable])), aes(x = Var1, y =          log(Freq))) + 
+          geom_bar(stat = "identity", color = "black", fill = "white") + 
+          theme_bw() + 
+          labs(x = input$variable, y = "frequency")
+        
+      }
+      
+      else {
+        ggplot(data.frame(table(estate[, input$variable])), aes(x = Var1, y =           Freq)) + 
+          geom_bar(stat = "identity", color = "black", fill = "white") + 
+          theme_bw() + 
+          labs(x = input$variable, y = "frequency")
+      }
+      
+      
+    }
+    
+  })
+  
+  
+  
+  
+  output$plot2 = renderPlot({
+    if((class(estate[, input$var1]) == "integer") & (class(estate[, input$var2]) == "integer")){
+      
+      p = ggplot(estate, aes(x = estate[, input$var1], y = estate[, input$var2])) + 
+        geom_point() + 
+        theme_bw()
+      
+      if(input$log2) {
+        p = p + scale_x_log10()
+      }
+      
+      if(input$log3) {
+        p = p + scale_y_log10()
+      }
+      if(input$ols) {
+        p = p + geom_smooth(method = "lm", se = F)
+      }
+      
+      return(p)
+    }
+    
+    if((class(estate[, input$var1]) == "factor" & class(estate[, input$var2]) == "integer")) {
+      p = ggplot(estate, aes(x = estate[, input$var1], y = estate[, input$var2])) +     
+        geom_boxplot() + 
+        theme_bw()
+      if(input$log3) {
+        p = p + scale_y_log10()
+      }
+      
+      return(p)
+    }
+    
+    
+    if((class(estate[, input$var1]) == "integer" & class(estate[, input$var2]) == "factor")) {
+      p = ggplot(estate, aes(x = estate[, input$var2], y = estate[, input$var1])) +     
+        geom_boxplot() + 
+        theme_bw() + 
+        coord_flip()
+      
+      if(input$log2) {
+        p = p + scale_y_log10()
+      }
+      
+      return(p)
+    }
+    
+    if((class(estate[, input$var1]) == "factor" & class(estate[, input$var2]) == "factor")) {
+      p = ggplot(estate, aes(x = estate[, input$var2], y = estate[, input$var1]))+ 
+        geom_jitter(stat = "identity") + 
+        theme_bw()
+      
+      return(p)
+      
+      
+    }
+  })
+  
+  
+  
+  map_dfr(estate, class) %>%
+    gather(names(.), key = "variable", value = "class") %>%
+    filter(class == "integer") ->tidy_df
+  
+  k = estate[, tidy_df$variable]
+  
+  output$spreadsheet = DT::renderDataTable({
+    
+    return(k)
+    
+  })
+}
+
+shinyApp(ui, server)
+
+

@@ -1,0 +1,193 @@
+---
+title: "HW 3"
+author: "Tianqi Luo"
+date: "`r Sys.Date()`"
+output: html_document
+urlcolor: "blue"
+params:
+  solutions: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo       = params$solutions, 
+                      eval       = params$solutions,
+                      fig.align  = "center",
+                      fig.height = 3, 
+                      fig.width  = 5)
+```
+
+## Question: Lists ##
+
+### 1 ###
+
+**Read the lists in**
+```{r}
+fitPoly = readRDS("../data/fpout.RDS")
+```
+
+### 2 ###
+
+**Extract the names**
+```{r}
+names(fitPoly)
+```
+
+### 3 ###
+
+**Remove the variable disploscores**
+```{r}
+fitPoly$diploscores = NULL
+
+names(fitPoly)
+```
+
+### 4 ###
+
+```{r}
+library(tidyverse)
+fitPoly$scores %>%
+  mutate(PosteriorMean = 0* P0 + 1 * P1 + 2* P2 + 3 * P3 + 4* P4 + 5 * P5 + 6 * P6) -> tidy_fitpoly
+
+head(tidy_fitpoly) %>%
+  select(PosteriorMean)
+```
+
+**Add the posterior mean as a new variable in the scores data frame**
+```{r}
+fitPoly$scores = tidy_fitpoly
+
+head(fitPoly$scores)
+```
+
+### 5 ###
+
+```{r}
+col_means = colMeans(fitPoly$scores[c("P0", "P1", "P2", "P3", "P4", "P5", "P6")])
+
+col_means
+```
+
+**Attach the col_means variable to the dataframe**
+```{r}
+fitPoly$col_means = col_means
+head(fitPoly$col_means)
+```
+
+
+### 6 ###
+
+**First Method**
+```{r}
+fitPoly$time
+```
+
+
+**Second Method**
+```{r}
+fitPoly["time"]
+```
+
+**Third Method**
+```{r}
+names(fitPoly)
+fitPoly[5]
+```
+
+## Question: For Loops ##
+
+**Write the function using if else statements and for loop**
+```{r}
+calcn = function(x, n) {
+  if(n>=1 & n <= 3) 
+  {  x[n] = x[n]
+    
+  }
+  else {
+    for (i in 4:n) {
+      x[i] = x[i-1] + (abs(x[i-2] - x[i-3]))/2
+    }
+    
+  }
+  return(x[n])
+}
+```
+
+
+
+### Evaluate functions ###
+
+```{r}
+calcn(x = c(11, 1, 13), n = 1000)
+calcn(x = c(11, 1, 13), n = 1)
+calcn(x = c(7, 3, 20), n = 8)
+```
+
+
+### Question: Lists and For-Loops ###
+
+```{r}
+x = rnorm(n = 10, mean = 0, sd = 1)
+tout = t.test(x)
+```
+
+
+### 1 ###
+
+**Write the function in for loop to do the t-test 1000 times**
+```{r}
+set.seed(4744469)
+x = list()
+tlist = list()
+for(i in 1:1000) { 
+  x[i] = list(rnorm(10, 0, 1))
+  tlist[i] = list(t.test(x[[i]]))
+}
+```
+
+
+
+### 2 ###
+
+**Extract the p-values from these 1000 t-tests into the variable p_values**
+```{r}
+p_values = vector("numeric", 1000)
+
+for(i in 1:1000) {
+  p_values[i] = tlist[[i]]$p.value
+}
+```
+
+```{r}
+head(p_values)
+```
+
+
+### Challenge ###
+
+**Create a data frame with variable p-values**
+```{r}
+qq = data.frame(p_values)
+```
+
+**Mutate a the variable p as a scaled variable from 1 to 1000 and create a new dataframe with the p-values**
+```{r}
+qq %>%
+  mutate(p = (1:1000)/1000 - 0.5/1000, p_values = sort(p_values)) ->
+  qq_tidy
+
+head(qq_tidy)
+```
+
+**Use ggplot to draw the dataframe using geom_point and geom_abline**
+```{r}
+ggplot(qq_tidy, aes(x = p, y = p_values)) + 
+  geom_point() + 
+  geom_abline(color = "red", linetype = 2) + 
+  theme_bw() + 
+  xlab("theoretical") + 
+  ylab("sample")
+```
+
+**We can see that the p-values indeed follow the uniform distribution**
+
+
