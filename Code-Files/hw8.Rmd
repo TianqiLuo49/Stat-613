@@ -1,0 +1,69 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+## Stat 613 HW8 ##
+
+## Tianqi Luo ##
+
+
+## 1 ##
+
+**Picture 1 matches (d) because it shows a strong negative linear relationship**
+
+**Picture 2 matches (b) because it shows weak positive linear relationship**
+
+**Picture 3 matches (b) because it shows a non-linear relationship**
+
+**Picture 4 matches (c) because it shows a weak negative linear relationship**
+
+## 2 ##
+
+**Residual = observed value - predicted value. Since residual is greater than 0, so our predicted value is smaller than the observed value, so we underestimated the incidence of skin cancer**
+
+## 3 ##
+
+### (a) ###
+
+**heart weight = body weight * 4.034 - 0.357 **
+
+### (b) ###
+
+**When the cat weight is 0 kg, the heart weight is -0.357g**
+
+### (c) ###
+
+**A cat that weighs one pound more is expected to have a heart weight of 4.034g**
+
+### (d) ###
+
+**The model explains 64.66% of the variability of the heart weight.**
+
+### (e) ###
+
+**r = sqrt(0.6466) = 0.8041**
+
+
+## 4 ##
+
+### (a) ###
+
+**3.91 + 0.78 * 28 = 25.75, so the predicted head circumference for the baby is 25.75 centimeters**
+
+### (b) ###
+
+**We assume to the alpha to be alpha = 0.05**
+
+**Set up the null hypothesis and alternative hypothesis**
+
+**H0 : b1 = 0, HA: b2 != 0 **
+
+**Our t-stat is (0.78-0)/0.35 = 2.229. **
+
+**According to our t-table, our two-tailed t-critcal value is t(alpha = 0.025, df = 23) = 2.069**
+
+**Since our t-test is greater than t-critical, we reject H0 and conclude that b2 is significant**
+

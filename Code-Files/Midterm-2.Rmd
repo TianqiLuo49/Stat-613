@@ -1,0 +1,262 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## Stat 613 Midterm 2 ##
+
+## Tianqi Luo ##
+
+## Cereals ##
+
+### 1 ###
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+cereals = read_csv("../data/cereals.csv")
+```
+
+```{r}
+head(cereals)
+```
+
+
+### 2 ###
+
+
+
+
+**Set up a two sample t-test**
+```{r}
+t.test(cereals$protein, cereals$fat, alternative = "greater")
+```
+
+**Set up the hypotheses**
+
+**H0 : protein - fat = 0 **
+
+**HA: protein - fat > 0 **
+
+**WE can see from the test, that the p-value of the t-test is smaller than the level of significance 0.05, so we reject the null hypothesis and concldue that the protein is indeed greater than fat**
+
+
+### 3 ###
+
+```{r}
+library(broom)
+```
+
+
+
+
+**Create a boxplot**
+```{r}
+ggplot(cereals, aes(x = type, y = sugars)) + 
+  geom_boxplot() + 
+  theme_bw()
+```
+
+**Run a t-test**
+```{r}
+tout1 = t.test(sugars ~ type, alternative = "greater", data = cereals)
+
+tidy_tout1 = tidy(tout1)
+
+tidy_tout1$p.value
+```
+
+**Set up the null hypothesis**
+
+**Null hypothesis: C - H = 0**
+
+**Alternative hypothesis: C - H > 0 **
+
+**Since the p-value is smaller than level of significance at 0.05, we reject the null hypothesis and conclude that there is indeed more sugar in cold cereals than hot cereals**
+
+
+### 3 ###
+
+
+
+**Fit a linear regression line with rating and sugar**
+```{r}
+lmout1 = lm(rating ~ sugars, data = cereals)
+
+tidy(lmout1)
+```
+
+**Generate a scatterplot and fit the linear regression line**
+```{r}
+ggplot(cereals, aes(x = sugars, y = rating)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", formula = y ~ x, se = F) + 
+  theme_bw()
+```
+
+**We can see from summary of the linear regression that, the estimate of the slope for sugars is negative. So as sugar level increases, ratings would tend to decrease.  We confirm that by plotting a scatterplot and the ols line**
+
+
+### 5 ###
+
+**Predict when sugars is 10**
+```{r}
+newdf = tribble(~ sugars, 10)
+predict_rating = predict(object = lmout1, newdata = newdf)
+predict_rating
+```
+
+**We can see that, when the sugar level is 10g, the predicted rating would be 35.276**
+
+
+
+## Agricultural Statistics ##
+
+### 1 ###
+
+**Read in the dataset**
+```{r}
+ag = read_csv("../data/ag.csv")
+```
+
+
+
+### 2 ###
+
+**Filter the dataset by wheat**
+```{r}
+ag %>%
+  filter(Commodity == "WHEAT") ->
+  ag_wheat
+```
+
+**Generate the plot group by state**
+```{r}
+ggplot(ag_wheat, aes(y = Yield, x = Year, group = State)) + 
+  geom_line(alpha = 1/3) + 
+  theme_bw() + 
+  ylab("Wheat Yield")
+```
+
+
+### 3 ###
+
+**Filter the dataset by years greater than 1950**
+```{r}
+ag_wheat %>%
+  filter(Year >= 1950) -> ag_wheat_new
+```
+
+**Use the nest function to fit a linear regression line for each state**
+```{r}
+ag_wheat_new %>%
+  group_by(State) %>%
+  nest() %>%
+  mutate(lmout = map(data, ~lm(Yield ~ Year, data = .))) %>%
+  mutate(tout = map(lmout, tidy)) %>%
+  unnest(tout) %>%
+  dplyr:: select(-lmout) -> ag_wheat_coefdat
+```
+
+```{r}
+head(ag_wheat_coefdat)
+```
+
+### 4 ###
+
+```{r}
+ag_wheat_coefdat %>%
+  filter(term == "Year") %>%
+  arrange(desc(estimate)) %>%
+  head(n = 5)
+```
+
+**We can see that Arizona, Nevada, California, Idaho and Kentucky had the fatest average wheat yield growth since 1950**
+
+
+## Beer Shiny App ##
+
+```{r}
+beer = read.table("../app/data/beer.txt")
+```
+
+**Clean the beer data**
+```{r}
+beer %>%
+  rename("Time" = 1, "EW" = 2, "Aug" = 3, "Bud" = 4) ->
+  tidy_beer
+```
+
+```{r}
+tidy_beer
+```
+
+
+
+
+```{r, eval = FALSE}
+library(shiny)
+
+ui <- fluidPage(
+  titlePanel("Beer and Foam Height"), 
+  sidebarLayout(
+    sidebarPanel(
+      checkboxGroupInput("beer", "Beers", c("Erdinger Weissbier", "Augustinerbrau Munchen", "Budweiser")), 
+      checkboxInput("log", "Log")
+    ), 
+    mainPanel(
+      plotOutput("line")
+    )
+  )
+)
+
+server <- function(input, output, session) {
+   output$line = renderPlot({
+     p = ggplot(tidy_beer, aes(x = Time)) + 
+       theme_bw()
+     
+     if(input$beer == "Erdinger Weissbier") {
+      p =  p + geom_line(aes(y = EW), color = "black")
+      
+     }
+      
+       
+     
+     
+     if(input$beer == "Augustinerbrau Munchen") {
+       p = p + geom_line(aes(y = Aug), color = "yellow")
+     }
+     
+     if(input$beer == "Budweiser") {
+       p = p + geom_line(aes(y = Bud), color = "blue")
+     }
+     
+     
+     
+     
+     if(input$log == TRUE) {
+      p = p + scale_y_log10()
+     }
+     return(p)
+
+   
+   })
+     
+    
+  }
+
+
+shinyApp(ui, server)
+```
+
+
+```{r}
+ggplot() +
+  geom_line(data = tidy_beer, aes(x = Time, y = EW), color = "black") + 
+  geom_line(data = tidy_beer, aes(x = Time, y = Aug), color = "yellow") + 
+  geom_line(data = tidy_beer, aes(x = Time, y = Bud), color = "blue") + 
+  scale_y_log10()
+```

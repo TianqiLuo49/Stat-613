@@ -1,0 +1,231 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## Stat 613 HW9 ##
+
+## Tianqi Luo ##
+
+## Wine and Heart Disease ##
+
+### 1 ###
+```{r}
+library(tidyverse)
+library(Sleuth3)
+data("ex0823")
+library(broom)
+library(ggplot2)
+```
+
+
+**Fit the linear model for data ex0823, tidy the model to see the coefficients**
+```{r}
+lmout1 = lm(Mortality ~ Wine, data = ex0823)
+tidy(lmout1)
+```
+
+**The linear regression line is Mortality = 7.687 - 0.0761 * Wine**
+
+**Plot the Mortality vs Wine**
+```{r}
+ggplot(ex0823, aes(x = Wine, y = Mortality)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", formula = y~x, se = F) + 
+  theme_bw()
+```
+
+**We can see from the glot that the relationship between mortality and wine is not exactly linear, but quadratic, so the linear regression model doesn't fit the data well**
+
+### 2 ###
+
+**Fit a linear model with log(Mortality) vs Wine**
+```{r}
+lmout2 = lm(log(Mortality) ~ Wine, data = ex0823)
+
+tidy(lmout2)
+```
+
+**The linear regression line is log(Mortality) = 2.045 - 0.0159 * Wine **
+
+**Plot log(Mortality) vs Wine on a graph**
+```{r}
+ggplot(ex0823, aes(x = Wine, y = log(Mortality))) + 
+  geom_point() + 
+  geom_smooth(method = "lm", formula = y~x, se = F)+ 
+  theme_bw()
+```
+
+**We can see that it still doesn't fix the issue completely as it's still not linear enough, so the log-linear model is not the perfect fit**
+
+### 3 ### 
+
+**Fit the model with log(Mortality) vs log(Wine)**
+```{r}
+lmout3 = lm(log(Mortality) ~ log(Wine), data = ex0823) 
+
+tidy(lmout3)
+```
+
+**The linear regression line is log(mortality) = 2.556 - 0.356 * log(wine)**
+
+**Plot log(Mortality) vs log(Wine) and add a OLS line**
+```{r}
+ggplot(ex0823, aes(x = log(Wine), y = log(Mortality))) + 
+  geom_point() + 
+  geom_smooth(method = "lm", formula = y~x, se = F) + 
+  theme_bw()
+```
+
+**We can see from the plot that when we plot log(wine) and log(mortality) the relationship appears to be linear, so this log-linear model is a good fit**
+
+
+### 4 ###
+
+**Suppose we have mortality rates m1, m2, and wine w1, w2. If we plug in w1, m1 and use it to subtract with the formula when we plug in w2, m2, we'll get equation log(m2/m1) = -0.356 * log(w2/w1). So, m2/m1 = (w2/w1)^(-0.356). **
+
+**Because of that, 1% of increase of wine(1.01 times) will result in (1.01)^(-0.356) = 0.996 times of decrease of mortality(0.4%).**
+
+### 5 ###
+
+**Generate the p.value for the lmout3 model**
+```{r}
+tidy(lmout3) %>%
+ dplyr::select(term, p.value)
+```
+
+**Suppose b1 is the coefficient for log(wine)**
+
+**Set up the null hypothesis and alternative hypothesis for b1**
+
+**Null hypothesis: b1 = 0**
+
+**Alternative hypothesis: b1 != 0**
+
+**Since p-value for b1 is way smaller than our level of significance at 0.05, we reject H0 and conclude that b1 is indeed significant**
+
+### 6 ###
+
+**Using the linear regression line log(mortality) = 2.556 - 0.356 * log(wine)**
+
+**Plug in Wine = 85.5**
+```{r}
+log_mortality = -0.356 * log(85.5) + 2.556
+mortality_rate = exp(log_mortality)
+mortality_rate
+```
+
+**I will tell my boss that the predicted mortality rate is 2.644 when a country drinks about 85.5 liters per person per year.** 
+
+### 7 ###
+
+**Generate the prediction intervals for Wine when Wine = 21**
+```{r}
+newdf = tribble(~ Wine, 21)
+prediction_intervals = predict(object = lmout3, newdata = newdf, interval = "prediction")
+prediction_intervals
+```
+
+```{r}
+mortality_prediction_intervals = exp(prediction_intervals)
+mortality_prediction_intervals
+```
+
+**The 95% prediction intervals for a country with a wine consumption of 21 liters per person per year is (2.626, 7.244)**
+
+
+## Airlines ##
+
+### 1 ###
+
+**Read the data in R**
+```{r}
+airfares = read_csv("../data/airfares.csv")
+```
+
+### 2 ###
+
+**Plot the adjusted fare vs year for each airport, add OLS lines for each airport**
+```{r, message = FALSE}
+ggplot(airfares, aes(x = year, y = log(adj_fare), color = name)) +   
+  geom_point() + 
+  geom_smooth(method = "lm", formula = y~x, se = F) + 
+  xlab("Year") + 
+  ylab("Adjusted Fare") + 
+  theme_bw() + 
+  theme(legend.position = "none")
+```
+
+**From the plot, we can see that the airfares for some airports are increasing higher as year increases, while for others the airfares decrease as year increases**
+
+
+### 3 ###
+
+**Use the nest function to make a dataframe that contains the coefficients for the linear models for all airports**
+```{r}
+airfares %>%
+  group_by(name, state) %>%
+  nest() %>%
+  mutate(lmout = map(data, ~lm(log(adj_fare) ~ year, data = .))) %>%
+  mutate(tout = map(lmout, tidy)) %>%
+  unnest(tout) %>%
+  dplyr::select(-lmout) ->
+  airfare_coefdat
+```
+
+
+```{r}
+head(airfare_coefdat)
+```
+
+
+
+
+
+
+### 4 ###
+
+
+**Extract the slopes from the dataframe, and plot the histogram**
+```{r}
+airfare_coefdat %>%
+  filter(term == "year") %>%
+  ggplot(aes(x = estimate)) + 
+  geom_histogram(bins = 30) +
+  theme_bw() 
+```
+
+**We can't see whether there are more positive slopes or negative slopes**
+
+**Plot a histogram to show the number of positive and negative slopes**
+```{r}
+airfare_coefdat %>%
+  filter(term == "year") %>%
+  mutate(var = ifelse(estimate > 0, "Increasing", "Decreasing")) -> tidy_airfare
+
+ggplot(tidy_airfare, aes(x = var)) + 
+  geom_histogram(stat = "count") + 
+  theme_bw()
+```
+
+**We can clearly see there are more decreasing airfares than increasing as years go on**
+
+### 5 ###
+
+**Group the dataset by state, calculate the average rate**
+```{r}
+tidy_airfare %>%
+  group_by(state) %>%
+  summarize(average_rate = mean(estimate)) -> state_average
+```
+
+
+**Arrange the data**
+```{r}
+state_average %>%
+  arrange(average_rate)
+```
+
+**We can see that Delaware has the fatest rate of decrease at -0.103**
+
